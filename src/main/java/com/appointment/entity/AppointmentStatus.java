@@ -2,5 +2,6 @@ package com.appointment.entity;
 public enum AppointmentStatus {
     BOOKED,
     SKIPPED,
-    DONE
+    DONE,
+    CANCELLED
 }

@@ -11,6 +11,7 @@ import com.appointment.exception.ResourceNotFoundException;
 import com.appointment.repository.AppointmentRepository;
 import com.appointment.repository.DoctorRepository;
 import com.appointment.repository.PatientRepository;
+import com.appointment.service.notification.EmailNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,8 @@ public class AppointmentService {
     private final AppointmentRepository appointmentRepository;
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
+    private final EmailNotificationService emailNotificationService;
+
     @Transactional
     public AppointmentResponse bookAppointment(AppointmentRequest request) {
         Patient patient = patientRepository.findById(request.getPatientId())
@@ -46,6 +49,18 @@ public class AppointmentService {
         appointment.setTokenNumber(nextToken);
         appointment.setStatus(AppointmentStatus.BOOKED);
         Appointment saved = appointmentRepository.save(appointment);
+        
+        // Send async email notification if patient has an email
+        if (patient.getEmail() != null && !patient.getEmail().trim().isEmpty()) {
+            emailNotificationService.sendAppointmentConfirmation(
+                patient.getEmail(),
+                patient.getName(),
+                doctor.getName(),
+                saved.getDate().toString(),
+                "Token " + saved.getTokenNumber()
+            );
+        }
+        
         return mapToResponse(saved);
     }
     @Transactional

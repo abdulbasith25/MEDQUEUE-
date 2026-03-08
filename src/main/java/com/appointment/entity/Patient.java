@@ -17,6 +17,10 @@ public class Patient {
     private String name;
     @Column(nullable = false, unique = true)
     private String phone;
+    
+    @Column(nullable = true)
+    private String email;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
     @PrePersist

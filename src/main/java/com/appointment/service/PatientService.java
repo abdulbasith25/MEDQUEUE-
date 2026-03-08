@@ -19,6 +19,7 @@ public class PatientService {
         Patient patient = new Patient();
         patient.setName(request.getName());
         patient.setPhone(request.getPhone());
+        patient.setEmail(request.getEmail());
         Patient saved = patientRepository.save(patient);
         return mapToResponse(saved);
     }
@@ -27,6 +28,7 @@ public class PatientService {
             patient.getId(),
             patient.getName(),
             patient.getPhone(),
+            patient.getEmail(),
             patient.getCreatedAt()
         );
     }

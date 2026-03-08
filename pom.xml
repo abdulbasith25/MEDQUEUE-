@@ -56,8 +56,16 @@
             <scope>runtime</scope>
             <optional>true</optional>
         </dependency>
-    </dependencies>
-    
+    <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        <version>2.3.0</version>
+    </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+</dependencies>
     <build>
         <plugins>
             <plugin>

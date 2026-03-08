@@ -13,4 +13,7 @@ public class PatientRequest {
     @NotBlank(message = "Phone is required")
     @Pattern(regexp = "^[0-9]{10}$", message = "Phone must be 10 digits")
     private String phone;
+
+    @jakarta.validation.constraints.Email(message = "Invalid email format")
+    private String email;
 }

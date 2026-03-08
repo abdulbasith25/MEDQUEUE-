@@ -10,5 +10,6 @@ public class PatientResponse {
     private Long id;
     private String name;
     private String phone;
+    private String email;
     private LocalDateTime createdAt;
 }
