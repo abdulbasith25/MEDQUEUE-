@@ -13,10 +13,14 @@ import com.appointment.repository.DoctorRepository;
 import com.appointment.repository.PatientRepository;
 import com.appointment.service.notification.EmailNotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class AppointmentService {
@@ -24,6 +28,7 @@ public class AppointmentService {
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
     private final EmailNotificationService emailNotificationService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public AppointmentResponse bookAppointment(AppointmentRequest request) {
@@ -61,7 +66,9 @@ public class AppointmentService {
             );
         }
         
-        return mapToResponse(saved);
+        AppointmentResponse response = mapToResponse(saved);
+        sendQueueUpdate(doctor.getId(), saved.getDate());
+        return response;
     }
     @Transactional
     public AppointmentResponse getNextToken(NextTokenRequest request) {
@@ -78,6 +85,7 @@ public class AppointmentService {
         Appointment appointment = appointments.get(0);
         appointment.setStatus(AppointmentStatus.DONE);
         Appointment updated = appointmentRepository.save(appointment);
+        sendQueueUpdate(doctor.getId(), request.getDate());
         return mapToResponse(updated);
     }
     @Transactional
@@ -89,6 +97,7 @@ public class AppointmentService {
         }
         appointment.setStatus(AppointmentStatus.SKIPPED);
         Appointment updated = appointmentRepository.save(appointment);
+        sendQueueUpdate(updated.getDoctor().getId(), updated.getDate());
         return mapToResponse(updated);
     }
     public AppointmentResponse getCurrentToken(Long doctorId, LocalDate date) {
@@ -100,6 +109,29 @@ public class AppointmentService {
         }
         return mapToResponse(appointments.get(0));
     }
+    private void sendQueueUpdate(Long doctorId, LocalDate date) {
+        // Find the last "DONE" appointment to get the "Current Token"
+        List<Appointment> lastDone = appointmentRepository.findLastDoneAppointment(doctorId, date);
+        Integer currentToken = lastDone.isEmpty() ? 0 : lastDone.get(0).getTokenNumber();
+        
+        // Find the next "BOOKED" appointment
+        List<Appointment> nextBooked = appointmentRepository.findNextBookedAppointment(
+            doctorId, date, AppointmentStatus.BOOKED);
+        Integer nextWaitingToken = nextBooked.isEmpty() ? null : nextBooked.get(0).getTokenNumber();
+        
+        long totalWaiting = nextBooked.size();
+
+        Map<String, Object> update = new HashMap<>();
+        update.put("doctorId", doctorId);
+        update.put("date", date.toString());
+        update.put("currentToken", currentToken);
+        update.put("nextWaitingToken", nextWaitingToken);
+        update.put("totalWaiting", totalWaiting);
+        update.put("timestamp", LocalDateTime.now().toString());
+
+        messagingTemplate.convertAndSend("/topic/queue/" + doctorId, update);
+    }
+
     private AppointmentResponse mapToResponse(Appointment appointment) {
         return new AppointmentResponse(
             appointment.getId(),

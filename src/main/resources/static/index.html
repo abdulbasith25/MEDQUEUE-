@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Queue Monitor | Smart Appointment System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #818cf8;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, var(--primary-light), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .status-connected {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .status-disconnected {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .setup-card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        input {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+        }
+
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            display: none; /* Hidden until connected */
+        }
+
+        .token-card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .token-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--primary);
+        }
+
+        .token-label {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .token-value {
+            font-size: 4rem;
+            font-weight: 700;
+            color: white;
+            margin: 1rem 0;
+        }
+
+        .waiting-count {
+            display: inline-block;
+            background: rgba(79, 70, 229, 0.1);
+            color: var(--primary-light);
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .log-section {
+            margin-top: 3rem;
+        }
+
+        .log-container {
+            background: #000;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.875rem;
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .log-entry {
+            margin-bottom: 0.5rem;
+            color: #4ade80;
+        }
+
+        .log-entry .time { color: #94a3b8; margin-right: 1rem; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .new-update {
+            animation: pulse 0.5s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div id="connectionStatus" class="status-badge status-disconnected">
+                Disconnected
+            </div>
+            <h1>Live Queue Monitor</h1>
+            <p style="color: var(--text-muted)">Real-time queue tracking for patients</p>
+        </header>
+
+        <div class="setup-card" id="setupCard">
+            <h3 style="margin-top: 0">Monitor a Doctor's Queue</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem">Enter the ID of the doctor you want to track in real-time.</p>
+            <div class="input-group">
+                <input type="number" id="doctorId" placeholder="Doctor ID (e.g. 1)" value="1">
+                <button onclick="startMonitoring()">Start Tracking</button>
+            </div>
+        </div>
+
+        <div class="monitor-grid" id="monitorGrid">
+            <div class="token-card" id="currentTokenCard">
+                <div class="token-label">Currently Serving</div>
+                <div class="token-value" id="currentToken">--</div>
+                <div class="waiting-count">Dr. <span id="displayDoctorName">...</span></div>
+            </div>
+
+            <div class="token-card" id="nextTokenCard">
+                <div class="token-label">Next in Line</div>
+                <div class="token-value" id="nextWaitingToken">--</div>
+                <div class="waiting-count" id="totalWaiting">0 Waiting</div>
+            </div>
+        </div>
+
+        <div class="log-section">
+            <h3 style="margin-bottom: 1rem">Real-time Activity Log</h3>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry">Waiting for connection...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let currentSubscription = null;
+
+        function connect() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.debug = null; // Disable console spam
+
+            stompClient.connect({}, function (frame) {
+                updateStatus('Connected', true);
+                addLog('System', 'Connected to WebSocket Server');
+            }, function (error) {
+                updateStatus('Disconnected - Error', false);
+                addLog('Error', 'Connection failed: ' + error);
+                setTimeout(connect, 5000);
+            });
+        }
+
+        function startMonitoring() {
+            const doctorId = document.getElementById('doctorId').value;
+            if (!doctorId) return alert('Please enter a Doctor ID');
+
+            if (!stompClient || !stompClient.connected) {
+                return alert('Not connected to server yet. Please wait...');
+            }
+
+            // Unsubscribe from previous if exists
+            if (currentSubscription) {
+                currentSubscription.unsubscribe();
+            }
+
+            addLog('System', `Subscribing to updates for Doctor ID: ${doctorId}`);
+            
+            currentSubscription = stompClient.subscribe('/topic/queue/' + doctorId, function (update) {
+                const data = JSON.parse(update.body);
+                handleUpdate(data);
+            });
+
+            document.getElementById('monitorGrid').style.display = 'grid';
+            document.getElementById('displayDoctorName').innerText = doctorId;
+            addLog('System', 'Awaiting live updates...');
+        }
+
+        function handleUpdate(data) {
+            console.log('Received Update:', data);
+            
+            if (data.type === 'QUEUE_UPDATE') {
+                updateToken('currentToken', data.currentToken);
+                updateToken('nextWaitingToken', data.nextWaitingToken || 'End');
+                document.getElementById('totalWaiting').innerText = data.totalWaiting + ' Waiting';
+                addLog('Update', `Queue Advanced: Now serving Token ${data.currentToken}`);
+                
+                // Trigger animation
+                triggerPulse('currentTokenCard');
+            } else if (data.type === 'AVAILABILITY_TOGGLE') {
+                const status = data.available ? 'AVAILABLE' : 'UNAVAILABLE';
+                addLog('Doctor', `Doctor status changed to ${status}`);
+                if (!data.available) {
+                    alert('Note: This doctor just marked themselves as UNAVAILABLE.');
+                }
+            }
+        }
+
+        function updateToken(id, val) {
+            const el = document.getElementById(id);
+            el.innerText = val === 0 ? '--' : val;
+        }
+
+        function triggerPulse(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('new-update');
+            void el.offsetWidth; // trigger reflow
+            el.classList.add('new-update');
+        }
+
+        function updateStatus(text, success) {
+            const el = document.getElementById('connectionStatus');
+            el.innerText = text;
+            el.className = 'status-badge ' + (success ? 'status-connected' : 'status-disconnected');
+        }
+
+        function addLog(source, msg) {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="time">[${time}]</span> <strong>${source}:</strong> ${msg}`;
+            container.prepend(entry);
+        }
+
+        // Initialize connection
+        connect();
+    </script>
+</body>
+</html>
