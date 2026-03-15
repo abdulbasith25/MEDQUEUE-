@@ -7,9 +7,10 @@ This guide will help you host your **Smart Appointment System** for free using P
 2.  Create a new project (call it `appointment-system`).
 3.  In the dashboard, you will see a **Connection String**. It looks like this:
     `postgresql://user:pass@ep-cool-flower-123456.neon.tech/neondb?sslmode=require`
-4.  Copy this entire string. You will need it for Render.
-
-## 2. Host the App (Render)
+4.  Copy this string. **CRITICAL:** Java needs it to start with `jdbc:`.
+    *   If Neon gives you `postgresql://...`
+    *   You must paste it as `jdbc:postgresql://...`
+5.  Also make sure it ends with `?sslmode=require`.
 1.  Push your code to a **GitHub repository**.
 2.  Go to [Render.com](https://render.com/) and sign up.
 3.  Click **New +** > **Web Service**.
