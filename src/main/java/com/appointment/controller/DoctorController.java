@@ -18,14 +18,23 @@ public class DoctorController {
     @PostMapping
     public ResponseEntity<DoctorResponse> createDoctor(@Valid @RequestBody DoctorRequest request) {
         DoctorResponse response = doctorService.createDoctor(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);  
     }
+    @GetMapping
+    public ResponseEntity<java.util.List<DoctorResponse>> getAllDoctors() {
+        return ResponseEntity.ok(doctorService.getAllDoctors());
+    }
+
     @GetMapping("/add")
-    public ResponseEntity<Long> addDoctor(@RequestParam String name,@RequestParam(defaultValue = "General") String specialization) {
-    Doctor doctor = new Doctor();
-    doctor.setName(name);
-    doctor.setSpecialization(specialization);
-    doctor.setAvailable(true);
+    public ResponseEntity<Long> addDoctor(
+            @RequestParam String name,
+            @RequestParam(defaultValue = "General") String specialization,
+            @RequestParam(required = false) String degree) {
+        Doctor doctor = new Doctor();
+        doctor.setName(name);
+        doctor.setSpecialization(specialization);
+        doctor.setDegree(degree);
+        doctor.setAvailable(true);
         Doctor saved = doctorRepository.save(doctor);
         return ResponseEntity.ok(saved.getId());
     }

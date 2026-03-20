@@ -14,8 +14,13 @@ public class Doctor {
     private Long id;
     @Column(nullable = false)
     private String name;
+    @Column (nullable = true)
+    private String degree;
     @Column(nullable = false)
     private String specialization;
     @Column(nullable = false)
     private Boolean available = true;
+
+    @Column(name = "user_id")
+    private Long userId; // Link to the users table
 }

@@ -3,6 +3,8 @@ package com.appointment.controller;
 import com.appointment.dto.AppointmentResponse;
 import com.appointment.dto.DailyStatsResponse;
 import com.appointment.dto.DoctorQueueStatusResponse;
+import com.appointment.dto.AuthRequest;
+import com.appointment.dto.AuthResponse;
 import com.appointment.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -77,5 +79,14 @@ public class AdminController {
     @PutMapping("/doctors/{id}/toggle-availability")
     public ResponseEntity<String> toggleDoctorAvailability(@PathVariable Long id) {
         return ResponseEntity.ok(adminService.toggleDoctorAvailability(id));
+    }
+
+    /**
+     * POST /admin/users
+     * Admin can create any user (Patient, Doctor, Admin)
+     */
+    @PostMapping("/users")
+    public ResponseEntity<AuthResponse> createUser(@RequestBody AuthRequest request) {
+        return ResponseEntity.ok(adminService.createUser(request));
     }
 }

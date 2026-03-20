@@ -6,14 +6,25 @@ import com.appointment.repository.DoctorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class DoctorService {
     private final DoctorRepository doctorRepository;
+
+    @Transactional(readOnly = true) 
+    public List<DoctorResponse> getAllDoctors() {
+        return doctorRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
     @Transactional
     public DoctorResponse createDoctor(DoctorRequest request) {
         Doctor doctor = new Doctor();
         doctor.setName(request.getName());
+        doctor.setDegree(request.getDegree());
         doctor.setSpecialization(request.getSpecialization());
         doctor.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
         Doctor saved = doctorRepository.save(doctor);
@@ -24,7 +35,8 @@ public class DoctorService {
             doctor.getId(),
             doctor.getName(),
             doctor.getSpecialization(),
-            doctor.getAvailable()
+            doctor.getAvailable(),
+            doctor.getDegree()
         );
     }
 }

@@ -15,4 +15,12 @@ public class AuthRequest {
     private String password;
     private String name; // For registration
     private Role role;   // For registration
+    
+    // For Patients
+    private String phone;
+    private String email;
+
+    // For Doctors
+    private String specialization;
+    private String degree;
 }

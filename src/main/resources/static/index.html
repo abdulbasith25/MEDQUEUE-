@@ -3,341 +3,594 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Queue Monitor | Smart Appointment System</title>
+    <title>MEDQUEUE | Smart Appointment & Queue Management</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-light: #818cf8;
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
             --bg: #0f172a;
             --card-bg: #1e293b;
             --text: #f8fafc;
             --text-muted: #94a3b8;
             --success: #22c55e;
             --warning: #f59e0b;
+            --danger: #ef4444;
+            --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
         }
 
+        * { box-sizing: border-box; }
         body {
             font-family: 'Outfit', sans-serif;
             background-color: var(--bg);
             color: var(--text);
             margin: 0;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding: 2rem;
+            overflow-x: hidden;
         }
 
-        .container {
-            max-width: 800px;
+        .navbar {
+            backdrop-filter: blur(12px);
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
             width: 100%;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(to right, var(--primary-light), var(--primary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.5rem 1rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        .status-connected {
-            background: rgba(34, 197, 94, 0.1);
-            color: var(--success);
-            border: 1px solid rgba(34, 197, 94, 0.2);
-        }
-
-        .status-disconnected {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-
-        .setup-card {
-            background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 1.5rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            margin-bottom: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .input-group {
+            z-index: 100;
             display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        input {
-            flex: 1;
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 0.75rem 1.25rem;
-            border-radius: 0.75rem;
-            color: white;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        input:focus {
-            border-color: var(--primary);
-        }
-
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
+        .btn {
+            cursor: pointer;
             padding: 0.75rem 1.5rem;
             border-radius: 0.75rem;
             font-weight: 600;
-            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .btn-primary { background: var(--gradient); color: white; }
+        .btn-primary:hover { transform: scale(1.05); box-shadow: 0 10px 20px -10px var(--primary); }
+        .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn-ghost:hover { background: rgba(255, 255, 255, 0.05); color: white; }
+        .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+        .btn-danger:hover { background: var(--danger); color: white; }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            flex: 1;
+            width: 100%;
+        }
+
+        /* --- Screens --- */
+        .screen { display: none; width: 100%; animation: fadeIn 0.4s ease-out; }
+        .screen.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Auth Card --- */
+        .auth-card {
+            max-width: 450px;
+            margin: 4rem auto;
+            background: var(--card-bg);
+            padding: 3rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .auth-card h2 { margin-top: 0; font-size: 2rem; }
+        .form-group { text-align: left; margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .form-group input, .form-group select {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.85rem 1.25rem;
+            border-radius: 0.75rem;
+            color: white;
+            font-size: 1rem;
             transition: all 0.2s;
         }
+        .form-group input:focus { border-color: var(--primary); outline: none; background: rgba(15, 23, 42, 0.8); }
 
-        button:hover {
-            background: var(--primary-light);
-            transform: translateY(-1px);
-        }
-
-        .monitor-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            display: none; /* Hidden until connected */
-        }
-
-        .token-card {
+        /* --- Stats/Dash Widgets --- */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .widget {
             background: var(--card-bg);
-            padding: 2rem;
+            padding: 1.5rem;
             border-radius: 1.5rem;
-            text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.05);
             position: relative;
-            overflow: hidden;
         }
+        .widget h4 { margin: 0; color: var(--text-muted); font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .widget .val { font-size: 2.25rem; font-weight: 700; margin: 0.5rem 0; }
 
-        .token-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: var(--primary);
-        }
+        /* --- List Styles --- */
+        .list-container { background: var(--card-bg); border-radius: 1.5rem; overflow: hidden; margin-top: 2rem; border: 1px solid rgba(255, 255, 255, 0.05); }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; background: rgba(255, 255, 255, 0.02); padding: 1rem 1.5rem; color: var(--text-muted); font-weight: 600; font-size: 0.875rem; }
+        td { padding: 1.25rem 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        tr:hover { background: rgba(255, 255, 255, 0.01); }
 
-        .token-label {
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-        }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-success { background: rgba(34, 197, 94, 0.1); color: var(--success); }
+        .badge-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
 
-        .token-value {
-            font-size: 4rem;
-            font-weight: 700;
-            color: white;
-            margin: 1rem 0;
-        }
+        .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: var(--primary); border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .waiting-count {
-            display: inline-block;
-            background: rgba(79, 70, 229, 0.1);
-            color: var(--primary-light);
-            padding: 0.25rem 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-
-        .log-section {
-            margin-top: 3rem;
-        }
-
-        .log-container {
-            background: #000;
-            padding: 1.5rem;
-            border-radius: 1rem;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.875rem;
-            height: 200px;
-            overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .log-entry {
-            margin-bottom: 0.5rem;
-            color: #4ade80;
-        }
-
-        .log-entry .time { color: #94a3b8; margin-right: 1rem; }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .new-update {
-            animation: pulse 0.5s ease-out;
-        }
+        /* Notification Toast */
+        #toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 2rem; border-radius: 1rem; background: var(--card-bg); border: 1px solid var(--primary); transform: translateY(200%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #toast.show { transform: translateY(0); }
     </style>
 </head>
 <body>
 
+    <nav class="navbar">
+        <a href="#" class="logo" onclick="showHomeScreen()">
+            <i class="fas fa-heart-pulse"></i> MEDQUEUE
+        </a>
+        <div id="navActions">
+            <button class="btn btn-ghost" onclick="showAuth('login')">Login</button>
+            <button class="btn btn-primary" onclick="showAuth('register')">Get Started</button>
+        </div>
+        <div id="userProfile" style="display: none; align-items: center; gap: 1rem;">
+            <span id="userNameDisplay" class="text-muted"></span>
+            <span id="userRoleDisplay" class="badge"></span>
+            <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
     <div class="container">
-        <header>
-            <div id="connectionStatus" class="status-badge status-disconnected">
-                Disconnected
+        
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="screen active">
+            <div style="text-align: center; padding-top: 4rem;">
+                <h1 style="font-size: 4rem; margin-bottom: 1rem; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Healthcare, Simplified.</h1>
+                <p style="font-size: 1.2rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 2.5rem;">The next-generation queue management system for clinics. Real-time token tracking, paperless booking, and powerful analytics.</p>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button class="btn btn-primary btn-lg" onclick="showAuth('register')">Book Appointment</button>
+                    <button class="btn btn-ghost btn-lg" onclick="showLiveMonitor()">Live Monitor</button>
+                </div>
             </div>
-            <h1>Live Queue Monitor</h1>
-            <p style="color: var(--text-muted)">Real-time queue tracking for patients</p>
-        </header>
+            
+            <div class="grid" style="margin-top: 5rem;">
+                <div class="widget">
+                    <i class="fas fa-clock" style="color: var(--primary); font-size: 1.5rem; margin-bottom: 1rem;"></i>
+                    <h4>Real-time</h4>
+                    <p class="text-muted">Instant WebSocket updates for queue positions.</p>
+                </div>
+                <div class="widget">
+                    <i class="fas fa-shield-halved" style="color: var(--secondary); font-size: 1.5rem; margin-bottom: 1rem;"></i>
+                    <h4>Secure</h4>
+                    <p class="text-muted">JWT-backed authentication and role hierarchy.</p>
+                </div>
+                <div class="widget">
+                    <i class="fas fa-chart-line" style="color: var(--success); font-size: 1.5rem; margin-bottom: 1rem;"></i>
+                    <h4>Analytics</h4>
+                    <p class="text-muted">Deep insights into clinic performance.</p>
+                </div>
+            </div>
+        </div>
 
-        <div class="setup-card" id="setupCard">
-            <h3 style="margin-top: 0">Monitor a Doctor's Queue</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem">Enter the ID of the doctor you want to track in real-time.</p>
-            <div class="input-group">
-                <input type="number" id="doctorId" placeholder="Doctor ID (e.g. 1)" value="1">
-                <button onclick="startMonitoring()">Start Tracking</button>
+        <!-- Auth Screen -->
+        <div id="authScreen" class="screen">
+            <div class="auth-card">
+                <h2 id="authTitle">Login</h2>
+                <div id="authForms">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="authUsername" placeholder="Enter username">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="authPassword" placeholder="••••••••">
+                    </div>
+                    
+                    <!-- Registration Only Fields -->
+                    <div id="regFields" style="display: none;">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="authName" placeholder="Dr. John Doe / Jane Doe">
+                        </div>
+                        <div class="form-group">
+                            <label>I am a...</label>
+                            <select id="authRole" onchange="toggleRoleFields()">
+                                <option value="ROLE_PATIENT">Patient</option>
+                                <option value="ROLE_DOCTOR">Doctor</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Doctor Specific -->
+                        <div id="doctorFields" style="display: none;">
+                            <div class="form-group">
+                                <label>Specialization</label>
+                                <input type="text" id="authSpec" placeholder="Cardiology">
+                            </div>
+                            <div class="form-group">
+                                <label>Degree</label>
+                                <input type="text" id="authDegree" placeholder="MBBS, MD">
+                            </div>
+                        </div>
+                        
+                        <!-- Patient Specific -->
+                        <div id="patientFields">
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="text" id="authPhone" placeholder="1234567890">
+                            </div>
+                            <div class="form-group">
+                                <label>Email (Optional)</label>
+                                <input type="email" id="authEmail" placeholder="jane@example.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;" id="authBtn" onclick="handleAuth()">Sign In</button>
+                    <p class="text-muted" style="margin-top: 1.5rem; font-size: 0.875rem;" id="authToggleText">
+                        New here? <a href="#" style="color: var(--primary)" onclick="toggleAuthMode(true)">Create an account</a>
+                    </p>
+                </div>
             </div>
         </div>
 
-        <div class="monitor-grid" id="monitorGrid">
-            <div class="token-card" id="currentTokenCard">
-                <div class="token-label">Currently Serving</div>
-                <div class="token-value" id="currentToken">--</div>
-                <div class="waiting-count">Dr. <span id="displayDoctorName">...</span></div>
+        <!-- Dashboard: Admin -->
+        <div id="adminDash" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Admin Console</h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-primary" onclick="showUserCreateModal()">Create User</button>
+                    <button class="btn btn-ghost" onclick="fetchDailyStats()">Refresh Stats</button>
+                </div>
+            </div>
+            
+            <div class="grid">
+                <div class="widget">
+                    <h4>Total Apps (Today)</h4>
+                    <div class="val" id="totalApps">0</div>
+                </div>
+                <div class="widget">
+                    <h4>Serving Now</h4>
+                    <div class="val" id="servingNow">0</div>
+                    <span class="text-muted">Across all doctors</span>
+                </div>
+                <div class="widget">
+                    <h4>Waiting</h4>
+                    <div class="val" id="totalWaiting" style="color: var(--warning)">0</div>
+                </div>
             </div>
 
-            <div class="token-card" id="nextTokenCard">
-                <div class="token-label">Next in Line</div>
-                <div class="token-value" id="nextWaitingToken">--</div>
-                <div class="waiting-count" id="totalWaiting">0 Waiting</div>
+            <div class="list-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Token</th>
+                            <th>Patient</th>
+                            <th>Doctor</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allAppointmentsList">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="log-section">
-            <h3 style="margin-bottom: 1rem">Real-time Activity Log</h3>
-            <div class="log-container" id="logContainer">
-                <div class="log-entry">Waiting for connection...</div>
+        <!-- Dashboard: Doctor -->
+        <div id="doctorDash" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Doctor Dashboard</h2>
+                <button class="btn btn-ghost" id="availToggleBtn" onclick="toggleAvailability()">Ready to Serve</button>
+            </div>
+            
+            <div class="grid">
+                <div class="widget" style="background: rgba(99, 102, 241, 0.1); border-color: var(--primary);">
+                    <h4>Currently Calling</h4>
+                    <div class="val" id="docCurrentToken">--</div>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <button class="btn btn-primary btn-sm" onclick="processNext()">Next Patient</button>
+                        <button class="btn btn-ghost btn-sm" onclick="skipCurrent()">Skip</button>
+                    </div>
+                </div>
+                <div class="widget">
+                    <h4>Waitlist</h4>
+                    <div class="val" id="docWaitlistCount">0</div>
+                    <span class="text-muted">Patients in queue</span>
+                </div>
             </div>
         </div>
+
+        <!-- Dashboard: Patient -->
+        <div id="patientDash" class="screen">
+            <h2>My Appointments</h2>
+            <div class="list-container">
+                <table id="myAppointmentsTable">
+                    <thead>
+                        <tr>
+                            <th>Doctor</th>
+                            <th>Token</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Live View</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patientAppsList">
+                        <!-- Filled after fetch -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <button class="btn btn-primary" style="margin-top: 2rem;" onclick="showBookModal()">New Appointment</button>
+        </div>
+
+        <!-- Screen: Live Monitor (The original view) -->
+        <div id="liveMonitorScreen" class="screen">
+            <button class="btn btn-ghost" onclick="showHomeScreen()"><i class="fas fa-arrow-left"></i> Back</button>
+            <div style="text-align: center; margin: 2rem 0;">
+                <h2 id="monitorDocName" class="val">Queue Monitor</h2>
+                <input type="number" id="monitorDocId" placeholder="Doctor ID" style="background: var(--card-bg); color: white; border: 1px solid #334155; padding: 0.5rem; border-radius: 0.5rem; width: 100px;">
+                <button class="btn btn-primary" onclick="startTracking()">Track</button>
+            </div>
+            
+            <div class="grid">
+                <div class="widget" style="text-align: center">
+                    <h4>Serving Now</h4>
+                    <div class="val" id="monCurrent">--</div>
+                </div>
+                <div class="widget" style="text-align: center">
+                    <h4>Next Up</h4>
+                    <div class="val" id="monNext">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals would go here (simplified as alerts for demo space) -->
+
     </div>
 
+    <div id="toast"></div>
+
     <script>
+        let currentUser = null;
+        let isRegister = false;
         let stompClient = null;
-        let currentSubscription = null;
 
-        function connect() {
-            const socket = new SockJS('/ws');
-            stompClient = Stomp.over(socket);
-            stompClient.debug = null; // Disable console spam
-
-            stompClient.connect({}, function (frame) {
-                updateStatus('Connected', true);
-                addLog('System', 'Connected to WebSocket Server');
-            }, function (error) {
-                updateStatus('Disconnected - Error', false);
-                addLog('Error', 'Connection failed: ' + error);
-                setTimeout(connect, 5000);
-            });
+        // --- Navigation ---
+        function setActiveScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
         }
 
-        function startMonitoring() {
-            const doctorId = document.getElementById('doctorId').value;
-            if (!doctorId) return alert('Please enter a Doctor ID');
-
-            if (!stompClient || !stompClient.connected) {
-                return alert('Not connected to server yet. Please wait...');
-            }
-
-            // Unsubscribe from previous if exists
-            if (currentSubscription) {
-                currentSubscription.unsubscribe();
-            }
-
-            addLog('System', `Subscribing to updates for Doctor ID: ${doctorId}`);
-            
-            currentSubscription = stompClient.subscribe('/topic/queue/' + doctorId, function (update) {
-                const data = JSON.parse(update.body);
-                handleUpdate(data);
-            });
-
-            document.getElementById('monitorGrid').style.display = 'grid';
-            document.getElementById('displayDoctorName').innerText = doctorId;
-            addLog('System', 'Awaiting live updates...');
+        function showHomeScreen() {
+            if (!currentUser) setActiveScreen('welcomeScreen');
+            else showDash(currentUser.role);
         }
 
-        function handleUpdate(data) {
-            console.log('Received Update:', data);
+        function showAuth(mode) {
+            isRegister = (mode === 'register');
+            toggleAuthMode(isRegister);
+            setActiveScreen('authScreen');
+        }
+
+        function toggleAuthMode(reg) {
+            isRegister = reg;
+            document.getElementById('authTitle').innerText = reg ? 'Create Account' : 'Sign In';
+            document.getElementById('regFields').style.display = reg ? 'block' : 'none';
+            document.getElementById('authBtn').innerText = reg ? 'Sign Up' : 'Sign In';
+            document.getElementById('authToggleText').innerHTML = reg ? 
+                'Already have an account? <a href="#" style="color: var(--primary)" onclick="toggleAuthMode(false)">Sign In</a>' :
+                'New here? <a href="#" style="color: var(--primary)" onclick="toggleAuthMode(true)">Create an account</a>';
+        }
+
+        function toggleRoleFields() {
+            const role = document.getElementById('authRole').value;
+            document.getElementById('doctorFields').style.display = role === 'ROLE_DOCTOR' ? 'block' : 'none';
+            document.getElementById('patientFields').style.display = role === 'ROLE_PATIENT' ? 'block' : 'none';
+        }
+
+        // --- Core Auth ---
+        async function handleAuth() {
+            const btn = document.getElementById('authBtn');
+            const user = document.getElementById('authUsername').value;
+            const pass = document.getElementById('authPassword').value;
             
-            if (data.type === 'QUEUE_UPDATE') {
-                updateToken('currentToken', data.currentToken);
-                updateToken('nextWaitingToken', data.nextWaitingToken || 'End');
-                document.getElementById('totalWaiting').innerText = data.totalWaiting + ' Waiting';
-                addLog('Update', `Queue Advanced: Now serving Token ${data.currentToken}`);
-                
-                // Trigger animation
-                triggerPulse('currentTokenCard');
-            } else if (data.type === 'AVAILABILITY_TOGGLE') {
-                const status = data.available ? 'AVAILABLE' : 'UNAVAILABLE';
-                addLog('Doctor', `Doctor status changed to ${status}`);
-                if (!data.available) {
-                    alert('Note: This doctor just marked themselves as UNAVAILABLE.');
+            if (!user || !pass) return notify('Please fill all fields', 'error');
+
+            const payload = { username: user, password: pass };
+            if (isRegister) {
+                payload.role = document.getElementById('authRole').value;
+                payload.name = document.getElementById('authName').value;
+                payload.phone = document.getElementById('authPhone').value;
+                payload.email = document.getElementById('authEmail').value;
+                payload.specialization = document.getElementById('authSpec').value;
+                payload.degree = document.getElementById('authDegree').value;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader" style="width:20px; height:20px; border-width:2px"></span>';
+
+            try {
+                const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
+                const resp = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!resp.ok) throw new Error(await resp.text());
+
+                const data = await resp.json();
+                loginSuccess(data);
+            } catch (err) {
+                notify(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = isRegister ? 'Sign Up' : 'Sign In';
+            }
+        }
+
+        function loginSuccess(data) {
+            currentUser = data;
+            localStorage.setItem('medToken', data.token);
+            localStorage.setItem('medUser', JSON.stringify(data));
+            
+            document.getElementById('navActions').style.display = 'none';
+            document.getElementById('userProfile').style.display = 'flex';
+            document.getElementById('userNameDisplay').innerText = data.username;
+            document.getElementById('userRoleDisplay').innerText = data.role.replace('ROLE_', '');
+            document.getElementById('userRoleDisplay').className = 'badge ' + 
+                (data.role === 'ROLE_ADMIN' ? 'btn-danger' : 
+                 data.role === 'ROLE_DOCTOR' ? 'btn-primary' : 'badge-success');
+            
+            showDash(data.role);
+            notify('Login successful!');
+        }
+
+        function showDash(role) {
+            if (role === 'ROLE_ADMIN') {
+                setActiveScreen('adminDash');
+                fetchDailyStats();
+                fetchAllAppointments();
+            } else if (role === 'ROLE_DOCTOR') {
+                setActiveScreen('doctorDash');
+                // Fetch doctor specific info if needed
+            } else if (role === 'ROLE_PATIENT') {
+                setActiveScreen('patientDash');
+                // fetchPatientApps();
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.clear();
+            location.reload();
+        }
+
+        // --- Admin Ops ---
+        async function fetchDailyStats() {
+            const resp = await authedFetch('/admin/daily-stats');
+            if (resp.ok) {
+                const stats = await resp.json();
+                document.getElementById('totalApps').innerText = stats.total;
+                document.getElementById('servingNow').innerText = stats.done;
+                document.getElementById('totalWaiting').innerText = stats.booked;
+            }
+        }
+
+        async function fetchAllAppointments() {
+            const resp = await authedFetch('/admin/appointments');
+            if (resp.ok) {
+                const apps = await resp.json();
+                const list = document.getElementById('allAppointmentsList');
+                list.innerHTML = apps.map(a => `
+                    <tr>
+                        <td>#${a.tokenNumber}</td>
+                        <td>${a.patientName}</td>
+                        <td>Dr. ${a.doctorName}</td>
+                        <td><span class="badge ${a.status === 'DONE' ? 'badge-success' : 'badge-warning'}">${a.status}</span></td>
+                        <td>
+                            ${a.status !== 'CANCELLED' ? `<button class="btn btn-danger btn-sm" onclick="cancelApp(${a.id})">Cancel</button>` : '--'}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // --- Utility ---
+        function authedFetch(url, options = {}) {
+            const token = localStorage.getItem('medToken');
+            return fetch(url, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
+            });
+        }
+
+        function notify(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.borderColor = type === 'error' ? 'var(--danger)' : 'var(--primary)';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        async function showUserCreateModal() {
+            const role = prompt("Enter Role (ROLE_ADMIN, ROLE_DOCTOR, ROLE_PATIENT):", "ROLE_DOCTOR");
+            if (!role) return;
+            const user = prompt("Username:");
+            const pass = prompt("Password:");
+            const name = prompt("Full Name:");
+            
+            const payload = { username: user, password: pass, role: role, name: name };
+            if (role === 'ROLE_DOCTOR') {
+                payload.specialization = prompt("Specialization:");
+                payload.degree = prompt("Degree:");
+            } else if (role === 'ROLE_PATIENT') {
+                payload.phone = prompt("Phone:");
+            }
+
+            const resp = await authedFetch('/admin/users', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            if (resp.ok) notify('User created successfully!');
+            else alert('Error: ' + await resp.text());
+        }
+
+        async function cancelApp(id) {
+            if (!confirm('Are you sure you want to cancel this appointment?')) return;
+            const resp = await authedFetch(`/admin/appointments/${id}/cancel`, { method: 'PUT' });
+            if (resp.ok) {
+                notify('Appointment cancelled');
+                fetchAllAppointments();
+                fetchDailyStats();
             }
         }
 
-        function updateToken(id, val) {
-            const el = document.getElementById(id);
-            el.innerText = val === 0 ? '--' : val;
-        }
-
-        function triggerPulse(id) {
-            const el = document.getElementById(id);
-            el.classList.remove('new-update');
-            void el.offsetWidth; // trigger reflow
-            el.classList.add('new-update');
-        }
-
-        function updateStatus(text, success) {
-            const el = document.getElementById('connectionStatus');
-            el.innerText = text;
-            el.className = 'status-badge ' + (success ? 'status-connected' : 'status-disconnected');
-        }
-
-        function addLog(source, msg) {
-            const container = document.getElementById('logContainer');
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            const time = new Date().toLocaleTimeString();
-            entry.innerHTML = `<span class="time">[${time}]</span> <strong>${source}:</strong> ${msg}`;
-            container.prepend(entry);
-        }
-
-        // Initialize connection
-        connect();
+        // Initialize from storage
+        window.onload = () => {
+            const saved = localStorage.getItem('medUser');
+            if (saved) loginSuccess(JSON.parse(saved));
+        };
     </script>
 </body>
 </html>

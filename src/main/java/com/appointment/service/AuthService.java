@@ -17,22 +17,43 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final com.appointment.repository.DoctorRepository doctorRepository;
+    private final com.appointment.repository.PatientRepository patientRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
 
     public AuthResponse register(AuthRequest request) {
+        Role selectedRole = request.getRole() != null ? request.getRole() : Role.ROLE_PATIENT;
         var user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole() != null ? request.getRole() : Role.ROLE_PATIENT)
+                .role(selectedRole)
                 .build();
-        userRepository.save(user);
-        var jwtToken = jwtUtils.generateToken(user);
+        User savedUser = userRepository.save(user);
+
+        // Create specialized profiles
+        if (selectedRole == Role.ROLE_DOCTOR) {
+            com.appointment.entity.Doctor doctor = new com.appointment.entity.Doctor();
+            doctor.setName(request.getName());
+            doctor.setSpecialization(request.getSpecialization());
+            doctor.setDegree(request.getDegree());
+            doctor.setUserId(savedUser.getId());
+            doctorRepository.save(doctor);
+        } else if (selectedRole == Role.ROLE_PATIENT) {
+            com.appointment.entity.Patient patient = new com.appointment.entity.Patient();
+            patient.setName(request.getName());
+            patient.setPhone(request.getPhone());
+            patient.setEmail(request.getEmail());
+            patient.setUserId(savedUser.getId());
+            patientRepository.save(patient);
+        }
+
+        var jwtToken = jwtUtils.generateToken(savedUser);
         return AuthResponse.builder()
                 .token(jwtToken)
-                .username(user.getUsername())
-                .role(user.getRole().name())
+                .username(savedUser.getUsername())
+                .role(savedUser.getRole().name())
                 .build();
     }
 

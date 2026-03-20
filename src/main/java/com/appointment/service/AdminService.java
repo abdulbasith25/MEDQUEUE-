@@ -3,6 +3,8 @@ package com.appointment.service;
 import com.appointment.dto.AppointmentResponse;
 import com.appointment.dto.DailyStatsResponse;
 import com.appointment.dto.DoctorQueueStatusResponse;
+import com.appointment.dto.AuthRequest;
+import com.appointment.dto.AuthResponse;
 import com.appointment.entity.Appointment;
 import com.appointment.entity.AppointmentStatus;
 import com.appointment.entity.Doctor;
@@ -29,6 +31,13 @@ public class AdminService {
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final AuthService authService;
+
+    // ── Admin can create any user ──────────────────────────────────────────────
+    @Transactional
+    public com.appointment.dto.AuthResponse createUser(com.appointment.dto.AuthRequest request) {
+        return authService.register(request);
+    }
 
     // ── 1. View all doctors with their live queue status for a given date ─────
     public List<DoctorQueueStatusResponse> getDoctorQueueStatus(LocalDate date) {

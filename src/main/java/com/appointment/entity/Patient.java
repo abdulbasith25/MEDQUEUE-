@@ -23,6 +23,9 @@ public class Patient {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+    @Column(name = "userId")
+    private Long userId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

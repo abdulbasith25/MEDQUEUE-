@@ -10,4 +10,5 @@ public class DoctorResponse {
     private String name;
     private String specialization;
     private Boolean available;
+    private String degree;
 }

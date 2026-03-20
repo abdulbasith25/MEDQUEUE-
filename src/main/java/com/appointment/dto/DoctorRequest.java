@@ -12,4 +12,5 @@ public class DoctorRequest {
     @NotBlank(message = "Specialization is required")
     private String specialization;
     private Boolean available = true;
+    private String degree;
 }

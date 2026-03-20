@@ -44,6 +44,9 @@ public class SecurityConfig {
                                 "/static/**",
                                 "/"
                         ).permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/appointments/next", "/appointments/skip/**").hasAnyRole("DOCTOR", "ADMIN")
+                        .requestMatchers("/appointments/book").hasAnyRole("PATIENT", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
