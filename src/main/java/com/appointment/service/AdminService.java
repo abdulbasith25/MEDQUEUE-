@@ -50,7 +50,7 @@ public class AdminService {
             List<Appointment> lastDone = appointmentRepository.findLastDoneAppointment(doctor.getId(), date);
             Integer currentToken = lastDone.isEmpty() ? null : lastDone.get(0).getTokenNumber();
             return new DoctorQueueStatusResponse(
-                doctor.getId(),
+                doctor.getId(), 
                 doctor.getName(),
                 doctor.getSpecialization(),
                 doctor.getAvailable(),

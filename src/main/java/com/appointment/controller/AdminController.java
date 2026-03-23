@@ -34,7 +34,7 @@ public class AdminController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         LocalDate targetDate = (date != null) ? date : LocalDate.now();
-        return ResponseEntity.ok(adminService.getDoctorQueueStatus(targetDate));
+        return ResponseEntity.ok(adminService.getDoctorQueueStatus(targetDate));  
     }
 
     /**
