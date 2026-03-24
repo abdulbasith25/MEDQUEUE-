@@ -8,6 +8,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 
 @Service
 @RequiredArgsConstructor
@@ -39,4 +44,13 @@ public class DoctorService {
             doctor.getDegree()
         );
     }
+    public Page<DoctorResponse> searchDoctors(String name, String specialization, int page, int size) {
+        name = (name == null) ? "" : name;
+        specialization = (specialization == null) ? "" : specialization;
+        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+
+        Page<Doctor> doctorPage = doctorRepository.findByNameContainingIgnoreCaseAndSpecializationContainingIgnoreCase(name, specialization, pageable);
+        return doctorPage.map(this::mapToResponse);
+    }
+    
 }
