@@ -82,8 +82,16 @@ public class AppointmentService {
         if (appointments.isEmpty()) {
             throw new ResourceNotFoundException("No booked appointments found for this doctor on " + request.getDate());
         }
+
+        // End the currently IN_PROGRESS appointment (if any) and update doctor stats
+        List<Appointment> inProgressList = appointmentRepository.findByDoctorAndStatus(doctor, AppointmentStatus.IN_PROGRESS);
+        if (!inProgressList.isEmpty()) {
+            completeAppointment(inProgressList.get(0), doctor);
+        }
+
         Appointment appointment = appointments.get(0);
-        appointment.setStatus(AppointmentStatus.DONE);
+        appointment.setActualStartTime(LocalDateTime.now());
+        appointment.setStatus(AppointmentStatus.IN_PROGRESS);
         Appointment updated = appointmentRepository.save(appointment);
         sendQueueUpdate(doctor.getId(), request.getDate());
         return mapToResponse(updated);
@@ -118,8 +126,17 @@ public class AppointmentService {
         List<Appointment> nextBooked = appointmentRepository.findNextBookedAppointment(
             doctorId, date, AppointmentStatus.BOOKED);
         Integer nextWaitingToken = nextBooked.isEmpty() ? null : nextBooked.get(0).getTokenNumber();
-        
-        long totalWaiting = nextBooked.size();
+        Doctor doctor = doctorRepository.findById(doctorId)
+            .orElseThrow(()-> new ResourceNotFoundException("doctor not found" + doctorId));
+        long averageConsultationTime = 0L;
+        if (doctor.getTotalConsultations() > 0) {
+            averageConsultationTime = doctor.getTotalDurationTook() / doctor.getTotalConsultations();
+        }
+        long reaminingCurrentTime = 0;
+        if (doctor.getActualStartTime() > != null){
+            reaminingCurrentTime = Math.max(0,averageConsultationTime - java.time.Duration.between(doctor.getActualStartTime(),LocalDateTime.now()).toMinutes());
+        }
+        long totalWaiting = (nextBooked.size() * averageConsultationTime) - reaminingCurrentTime; 
 
         Map<String, Object> update = new HashMap<>();
         update.put("doctorId", doctorId);
@@ -132,6 +149,58 @@ public class AppointmentService {
         messagingTemplate.convertAndSend("/topic/queue/" + doctorId, update);
     }
 
+    @Transactional
+    public AppointmentResponse startConsultation(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + appointmentId));
+        
+        Doctor doctor = appointment.getDoctor();
+        // End any existing in-progress consultation for this doctor
+        List<Appointment> inProgress = appointmentRepository.findByDoctorAndStatus(doctor, AppointmentStatus.IN_PROGRESS);
+        for (Appointment p : inProgress) {
+            if (!p.getId().equals(appointmentId)) {
+                completeAppointment(p, doctor);
+            }
+        }
+
+        appointment.setActualStartTime(LocalDateTime.now());
+        appointment.setStatus(AppointmentStatus.IN_PROGRESS);
+        Appointment updated = appointmentRepository.save(appointment);
+        
+        sendQueueUpdate(doctor.getId(), updated.getDate());
+        return mapToResponse(updated);
+    }
+
+    @Transactional
+    public AppointmentResponse endConsultation(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + appointmentId));
+        
+        Doctor doctor = appointment.getDoctor();
+        completeAppointment(appointment, doctor);
+        
+        sendQueueUpdate(doctor.getId(), appointment.getDate());
+        return mapToResponse(appointment);
+    }
+
+    private void completeAppointment(Appointment appointment, Doctor doctor) {
+        if (appointment.getStatus() != AppointmentStatus.IN_PROGRESS) {
+            return;
+        }
+        appointment.setStatus(AppointmentStatus.DONE);
+        appointment.setActualEndTime(LocalDateTime.now());
+        long duration = java.time.Duration.between(
+            appointment.getActualStartTime(), 
+            appointment.getActualEndTime()
+        ).toMinutes();
+        
+        doctor.setTotalDurationTook(doctor.getTotalDurationTook() + duration);
+        doctor.setTotalConsultations(doctor.getTotalConsultations() + 1);
+        
+        appointmentRepository.save(appointment);
+        doctorRepository.save(doctor);
+    }
+
     private AppointmentResponse mapToResponse(Appointment appointment) {
         return new AppointmentResponse(
             appointment.getId(),
@@ -142,7 +211,18 @@ public class AppointmentService {
             appointment.getDate(),
             appointment.getTokenNumber(),
             appointment.getStatus(),
-            appointment.getCreatedAt()
+            appointment.getCreatedAt()  
         );
     }
+
+    @Transactional
+    public void resetDailyAppointments(){
+        LocalDate today = LocalDate.now();
+        List<Appointment> appointments = appointmentRepository.findByStatusAndDateLessThanEqual(AppointmentStatus.BOOKED, today);
+        for(Appointment a : appointments){
+            a.setStatus(AppointmentStatus.CANCELLED);
+        }
+        appointmentRepository.saveAll(appointments); 
+    }
+
 }

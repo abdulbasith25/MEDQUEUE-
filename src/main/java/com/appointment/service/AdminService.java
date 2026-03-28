@@ -35,14 +35,14 @@ public class AdminService {
 
     // ── Admin can create any user ──────────────────────────────────────────────
     @Transactional
-    public com.appointment.dto.AuthResponse createUser(com.appointment.dto.AuthRequest request) {
+    public com.appointment.dto.AuthResponse createUser(AuthRequest request) {
         return authService.register(request);
     }
 
     // ── 1. View all doctors with their live queue status for a given date ─────
     public List<DoctorQueueStatusResponse> getDoctorQueueStatus(LocalDate date) {
         List<Doctor> doctors = doctorRepository.findAll();
-        return doctors.stream().map(doctor -> {
+            
             long booked    = appointmentRepository.countByDoctorAndDateAndStatus(doctor.getId(), date, AppointmentStatus.BOOKED);
             long done      = appointmentRepository.countByDoctorAndDateAndStatus(doctor.getId(), date, AppointmentStatus.DONE);
             long skipped   = appointmentRepository.countByDoctorAndDateAndStatus(doctor.getId(), date, AppointmentStatus.SKIPPED);

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import com.appointment.entity.Patient;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
 import java.util.List;
@@ -28,4 +29,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     long countByDateAndStatus(@Param("date") LocalDate date, @Param("status") AppointmentStatus status);
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.date = :date")
     long countByDate(@Param("date") LocalDate date);
+    List<Appointment> findByStatus(AppointmentStatus status);
+    List<Appointment> findByStatusAndDateLessThanEqual(AppointmentStatus status, LocalDate date);
+    List<Appointment> findByDoctorAndStatus(Doctor doctor, AppointmentStatus status);
+    Optional<Appointment> findFirstByPatientAndDateOrderByTokenNumberDesc(Patient patient, LocalDate date);
+    
 }

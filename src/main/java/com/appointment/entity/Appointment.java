@@ -28,6 +28,10 @@ public class Appointment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AppointmentStatus status = AppointmentStatus.BOOKED;
+    @Column(nullable = true)
+    private LocalDateTime actualStartTime;
+    @Column(nullable = true)
+    private LocalDateTime actualEndTime;
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
     @PrePersist

@@ -15,4 +15,9 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
             String specialization,
             Pageable pageable
     );
+    @Modifying
+    @Transactional
+    @Query("UPDATE Doctor d SET d.totalConsultationTime = d.totalConsultationTime + :minutes, " +
+        "d.totalPatientsSeen = d.totalPatientsSeen + 1 WHERE d.id = :doctorId")
+    void updateDoctorStats(@Param("doctorId") Long doctorId, @Param("minutes") long minutes);
 }

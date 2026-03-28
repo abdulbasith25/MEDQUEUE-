@@ -12,9 +12,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+
 @Service
 @RequiredArgsConstructor
-public class AuthService {
+public class AuthService { 
 
     private final UserRepository userRepository;
     private final com.appointment.repository.DoctorRepository doctorRepository;

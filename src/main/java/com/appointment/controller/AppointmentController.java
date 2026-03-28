@@ -40,4 +40,16 @@ public class AppointmentController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping(/"start-consultation")
+    public ResponseEntity<AppointmentResponse> startConsultation(@RequestBody Long appointmentId){
+        AppointmentResponse response = appointmentService.startConsultation(appointmentId)
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("end-consultation")
+    public ResponseEntity<AppointmentResponse> endConsultation(@RequestBody Long appointmentId){
+        AppointmentResponse response = appointmentService.endConsultation(appointmentId)
+        return ResponseEntity.ok(response);
+    }
+
 }

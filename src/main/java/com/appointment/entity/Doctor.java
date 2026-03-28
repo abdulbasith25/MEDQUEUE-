@@ -20,7 +20,11 @@ public class Doctor {
     private String specialization;
     @Column(nullable = false)
     private Boolean available = true;
+    @Column(nullable = true)
+    private Long totalDurationTook = 0L;
+    @Column(nullable = true)
+    private Long totalConsultations = 0L;
 
     @Column(name = "user_id")
-    private Long userId; // Link to the users table
+    private Long userId; 
 }
