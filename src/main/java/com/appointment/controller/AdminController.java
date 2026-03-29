@@ -3,9 +3,11 @@ package com.appointment.controller;
 import com.appointment.dto.AppointmentResponse;
 import com.appointment.dto.DailyStatsResponse;
 import com.appointment.dto.DoctorQueueStatusResponse;
+import com.appointment.dto.DoctorResponse;
 import com.appointment.dto.AuthRequest;
 import com.appointment.dto.AuthResponse;
 import com.appointment.service.AdminService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -89,4 +91,12 @@ public class AdminController {
     public ResponseEntity<AuthResponse> createUser(@RequestBody AuthRequest request) {
         return ResponseEntity.ok(adminService.createUser(request));
     }
+
+    @GetMapping("/doctor-statistics")
+    public ResponseEntity<DoctorResponse> doctorStatistics(@RequestParam Long id,
+     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        LocalDate targetDate = (date != null) ? date : LocalDate.now();
+        return ResponseEntity.ok(adminService.doctorStatistics(id, targetDate));
+    }
+    
 }

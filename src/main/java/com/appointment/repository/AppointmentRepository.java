@@ -33,5 +33,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByStatusAndDateLessThanEqual(AppointmentStatus status, LocalDate date);
     List<Appointment> findByDoctorAndStatus(Doctor doctor, AppointmentStatus status);
     Optional<Appointment> findFirstByPatientAndDateOrderByTokenNumberDesc(Patient patient, LocalDate date);
+    List<Appointment> findByDoctorAndStatusAndDate(Doctor doctor, AppointmentStatus status, LocalDate date);
     
 }

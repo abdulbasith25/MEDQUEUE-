@@ -12,4 +12,6 @@ public class DoctorResponse {
     private String specialization;
     private Boolean available;
     private String degree;
+    private Long averageConsultationTime;
+    private Long totalConsultaions;
 }

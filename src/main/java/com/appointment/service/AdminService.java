@@ -3,6 +3,7 @@ package com.appointment.service;
 import com.appointment.dto.AppointmentResponse;
 import com.appointment.dto.DailyStatsResponse;
 import com.appointment.dto.DoctorQueueStatusResponse;
+import com.appointment.dto.DoctorResponse;
 import com.appointment.dto.AuthRequest;
 import com.appointment.dto.AuthResponse;
 import com.appointment.entity.Appointment;
@@ -146,5 +147,41 @@ public class AdminService {
             a.getStatus(),
             a.getCreatedAt()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public DoctorResponse doctorStatistics(Long doctorId, LocalDate date) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+            .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with id: " + doctorId));
+        List<Appointment> appointments = appointmentRepository.findByDoctorAndStatusAndDate(doctor, AppointmentStatus.DONE, date);
+        long totalConsultations = appointments.size();
+        long totalDurationTook = calculateTotalDuration(appointments);
+        long averageConsultationTime = 0;
+        if (totalConsultations > 0) {
+            averageConsultationTime = totalDurationTook / totalConsultations;
+        }
+        return new DoctorResponse(
+            doctor.getId(),
+            doctor.getName(),
+            doctor.getSpecialization(),
+            doctor.getAvailable(),
+            doctor.getDegree(),
+            averageConsultationTime,
+            totalConsultations
+        );
+    }
+
+    private long calculateTotalDuration(List<Appointment> appointments) {
+        long totalDurationTook = 0;
+        for (Appointment a : appointments) {
+            if (a.getActualStartTime() != null && a.getActualEndTime() != null) {
+                long diff = java.time.Duration.between(
+                    a.getActualStartTime(),
+                    a.getActualEndTime()
+                ).toMinutes();
+                totalDurationTook += diff;
+            }
+        }
+        return totalDurationTook;
     }
 }
