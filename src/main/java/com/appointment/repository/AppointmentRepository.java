@@ -1,4 +1,5 @@
 package com.appointment.repository;
+import com.appointment.dto.DoctorQueueStatusResponse;
 import com.appointment.entity.Appointment;
 import com.appointment.entity.AppointmentStatus;
 import com.appointment.entity.Doctor;
@@ -29,6 +30,22 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     long countByDateAndStatus(@Param("date") LocalDate date, @Param("status") AppointmentStatus status);
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.date = :date")
     long countByDate(@Param("date") LocalDate date);
+
+    // Single query — replaces N×5 individual queries for the admin dashboard
+    @Query("""
+        SELECT new com.appointment.dto.DoctorQueueStatusResponse(
+            d.id, d.name, d.specialization, d.available,
+            SUM(CASE WHEN a.status = com.appointment.entity.AppointmentStatus.BOOKED   THEN 1L ELSE 0L END),
+            SUM(CASE WHEN a.status = com.appointment.entity.AppointmentStatus.DONE      THEN 1L ELSE 0L END),
+            SUM(CASE WHEN a.status = com.appointment.entity.AppointmentStatus.SKIPPED   THEN 1L ELSE 0L END),
+            SUM(CASE WHEN a.status = com.appointment.entity.AppointmentStatus.CANCELLED THEN 1L ELSE 0L END),
+            MAX(CASE WHEN a.status = com.appointment.entity.AppointmentStatus.DONE THEN a.tokenNumber ELSE null END)
+        )
+        FROM Doctor d
+        LEFT JOIN Appointment a ON a.doctor.id = d.id AND a.date = :date
+        GROUP BY d.id, d.name, d.specialization, d.available
+        """)
+    List<DoctorQueueStatusResponse> findAllDoctorQueueStatus(@Param("date") LocalDate date);
     List<Appointment> findByStatus(AppointmentStatus status);
     List<Appointment> findByStatusAndDateLessThanEqual(AppointmentStatus status, LocalDate date);
     List<Appointment> findByDoctorAndStatus(Doctor doctor, AppointmentStatus status);

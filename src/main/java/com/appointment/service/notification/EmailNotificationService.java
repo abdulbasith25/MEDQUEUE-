@@ -6,13 +6,15 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class EmailNotificationService {
 
-    @Autowired
-    private JavaMailSender javaMailSender;
+
+    private final JavaMailSender javaMailSender;
 
     // Use our custom thread pool specific for notifications
     @Async("notificationExecutor")
@@ -40,4 +42,10 @@ public class EmailNotificationService {
             log.error("Failed to send email to {}: {}", toEmail, e.getMessage());
         }
     }
+
+    @Async("pushNotificationExecuter")
+    public void sendPushNotification(){
+        //my core logic 
+    }
+
 }

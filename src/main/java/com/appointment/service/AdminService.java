@@ -6,6 +6,9 @@ import com.appointment.dto.DoctorQueueStatusResponse;
 import com.appointment.dto.DoctorResponse;
 import com.appointment.dto.AuthRequest;
 import com.appointment.dto.AuthResponse;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import com.appointment.entity.Appointment;
 import com.appointment.entity.AppointmentStatus;
 import com.appointment.entity.Doctor;
@@ -33,7 +36,7 @@ public class AdminService {
     private final DoctorRepository doctorRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final AuthService authService;
-
+    private final ExecutorService executer = Executors.newFixedThreadPool(5);
     // ── Admin can create any user ──────────────────────────────────────────────
     @Transactional
     public com.appointment.dto.AuthResponse createUser(AuthRequest request) {
@@ -41,34 +44,20 @@ public class AdminService {
     }
 
     // ── 1. View all doctors with their live queue status for a given date ─────
+    // One single DB query (JOIN + GROUP BY) instead of N×5 round trips
     public List<DoctorQueueStatusResponse> getDoctorQueueStatus(LocalDate date) {
-        List<Doctor> doctors = doctorRepository.findAll();
-            
-            long booked    = appointmentRepository.countByDoctorAndDateAndStatus(doctor.getId(), date, AppointmentStatus.BOOKED);
-            long done      = appointmentRepository.countByDoctorAndDateAndStatus(doctor.getId(), date, AppointmentStatus.DONE);
-            long skipped   = appointmentRepository.countByDoctorAndDateAndStatus(doctor.getId(), date, AppointmentStatus.SKIPPED);
-            long cancelled = appointmentRepository.countByDoctorAndDateAndStatus(doctor.getId(), date, AppointmentStatus.CANCELLED);
-            List<Appointment> lastDone = appointmentRepository.findLastDoneAppointment(doctor.getId(), date);
-            Integer currentToken = lastDone.isEmpty() ? null : lastDone.get(0).getTokenNumber();
-            return new DoctorQueueStatusResponse(
-                doctor.getId(), 
-                doctor.getName(),
-                doctor.getSpecialization(),
-                doctor.getAvailable(),
-                booked, done, skipped, cancelled,
-                currentToken
-            );
-        }).collect(Collectors.toList());
+        return appointmentRepository.findAllDoctorQueueStatus(date);
     }
 
     // ── 2. Daily appointment statistics across the whole clinic ───────────────
     public DailyStatsResponse getDailyStats(LocalDate date) {
-        long total     = appointmentRepository.countByDate(date);
-        long booked    = appointmentRepository.countByDateAndStatus(date, AppointmentStatus.BOOKED);
-        long done      = appointmentRepository.countByDateAndStatus(date, AppointmentStatus.DONE);
-        long skipped   = appointmentRepository.countByDateAndStatus(date, AppointmentStatus.SKIPPED);
-        long cancelled = appointmentRepository.countByDateAndStatus(date, AppointmentStatus.CANCELLED);
-        return new DailyStatsResponse(date, total, booked, done, skipped, cancelled);
+        CompletableFuture<Long> totalAppointments = CompletableFuture.supplyAsync(() -> appointmentRepository.countByDate(date),executer);
+        CompletableFuture<Long> totalBooked = CompletableFuture.supplyAsync(() ->appointmentRepository.countByDateAndStatus(date,AppointmentStatus.BOOKED),executer);
+        CompletableFuture<Long> totalDone   = CompletableFuture.supplyAsync(() ->appointmentRepository.countByDateAndStatus(date,AppointmentStatus.DONE),executer);
+        CompletableFuture<Long> totalSkipped = CompletableFuture.supplyAsync(() ->appointmentRepository.countByDateAndStatus(date,AppointmentStatus.SKIPPED),executer);
+        CompletableFuture<Long> totalCancelled = CompletableFuture.supplyAsync(() ->appointmentRepository.countByDateAndStatus(date,AppointmentStatus.CANCELLED),executer);
+        CompletableFuture.allOf(totalAppointments, totalBooked, totalCancelled, totalDone, totalSkipped).join();
+        return new DailyStatsResponse(date,totalAppointments.join(), totalBooked.join(), totalDone.join(), totalSkipped.join(), totalCancelled.join());
     }
 
     // ── 3. Get all appointments for a specific date (admin full view) ─────────
