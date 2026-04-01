@@ -22,4 +22,5 @@ public class PatientResponse {
     private Integer nextWaitingToken;
     private Long estimatedWaitMinutes;
     private LocalDateTime expectedTime;
+    private boolean checkedIn;
 }

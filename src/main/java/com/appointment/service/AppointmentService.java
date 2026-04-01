@@ -132,11 +132,18 @@ public class AppointmentService {
         if (doctor.getTotalConsultations() > 0) {
             averageConsultationTime = doctor.getTotalDurationTook() / doctor.getTotalConsultations();
         }
-        long reaminingCurrentTime = 0;
-        if (doctor.getActualStartTime() > != null){
-            reaminingCurrentTime = Math.max(0,averageConsultationTime - java.time.Duration.between(doctor.getActualStartTime(),LocalDateTime.now()).toMinutes());
+        
+        long remainingCurrentTime = 0;
+        List<Appointment> inProgress = appointmentRepository.findByDoctorAndStatus(doctor, AppointmentStatus.IN_PROGRESS);
+        if (!inProgress.isEmpty()) {
+            Appointment current = inProgress.get(0);
+            if (current.getActualStartTime() != null) {
+                remainingCurrentTime = Math.max(0, averageConsultationTime - 
+                    java.time.Duration.between(current.getActualStartTime(), LocalDateTime.now()).toMinutes());
+            }
         }
-        long totalWaiting = (nextBooked.size() * averageConsultationTime) - reaminingCurrentTime; 
+        
+        long totalWaiting = (nextBooked.size() * averageConsultationTime) + remainingCurrentTime; 
 
         Map<String, Object> update = new HashMap<>();
         update.put("doctorId", doctorId);

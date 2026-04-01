@@ -6,6 +6,7 @@ import com.appointment.entity.AppointmentStatus;
 import com.appointment.entity.Doctor;
 import com.appointment.entity.Patient;
 import com.appointment.exception.DuplicateResourceException;
+import com.appointment.exception.InvalidOperationException;
 import com.appointment.exception.ResourceNotFoundException;
 import com.appointment.repository.AppointmentRepository;
 import com.appointment.repository.DoctorRepository;
@@ -23,6 +24,7 @@ public class PatientService {
     private final PatientRepository patientRepository;
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
+    private final QueueShufflingService shufflingService;
     @Transactional
     public PatientResponse createPatient(PatientRequest request) {
         if (patientRepository.existsByPhone(request.getPhone())) {
@@ -76,7 +78,33 @@ public class PatientService {
                 .nextWaitingToken(nextWaitingToken)
                 .estimatedWaitMinutes(waitingMinutes)
                 .expectedTime(expectedTime)
+                .checkedIn(appointment.isCheckedIn())
                 .build();
+    }
+
+    @Transactional
+    public PatientResponse checkIn(Long userId, Long appointmentId) {
+        Patient patient = patientRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient profile not found for user ID: " + userId));
+        
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + appointmentId));
+        
+        if (!appointment.getPatient().getId().equals(patient.getId())) {
+            throw new InvalidOperationException("This appointment does not belong to the patient");
+        }
+        
+        if (appointment.getDate().isAfter(LocalDate.now())) {
+            throw new InvalidOperationException("Cannot check in for a future appointment");
+        }
+        
+        appointment.setCheckedIn(true);
+        Appointment saved = appointmentRepository.save(appointment);
+        
+        // Trigger the shuffling engine!
+        shufflingService.tryShuffleQueue(saved.getDoctor().getId(), saved.getDate());
+        
+        return myToken(saved.getPatient().getUserId()); // Return updated token info
     }
 
     private PatientResponse mapToResponse(Patient patient) {

@@ -29,4 +29,14 @@ public class PatientController {
         PatientResponse response = patientService.myToken(user.getId());
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/{appointmentId}/check-in")
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<PatientResponse> checkIn(@PathVariable Long appointmentId, Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        // We first find the patient associated with the user
+        // and then call checkIn.
+        PatientResponse response = patientService.checkIn(user.getId(), appointmentId); // userId used as patient lookup internal proxy or fixed in service
+        return ResponseEntity.ok(response);
+    }
 }

@@ -28,6 +28,9 @@ public class Appointment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AppointmentStatus status = AppointmentStatus.BOOKED;
+
+    @Column(nullable = false)
+    private boolean checkedIn = false;
     @Column(nullable = true)
     private LocalDateTime actualStartTime;
     @Column(nullable = true)
