@@ -21,6 +21,15 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ArrayBlockingQueue;
+
+
 @Service
 @RequiredArgsConstructor
 public class AppointmentService {
@@ -29,6 +38,21 @@ public class AppointmentService {
     private final DoctorRepository doctorRepository;
     private final EmailNotificationService emailNotificationService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final InsuranceService insuranceService;
+    
+    private static final int coreThreads = 2;
+    private static final int maxThreads = 10;
+    private static final long timeOut = 50L;
+    private static final BlockingQueue<Runnable> queueCapacity = new ArrayBlockingQueue<>(50);
+
+    private final ExecutorService insuranceExecutor = new ThreadPoolExecutor(
+        coreThreads,                                  
+        maxThreads,                                 
+        timeOut, 
+        TimeUnit.SECONDS, 
+        queueCapacity 
+    );
+    private final ExecutorService dynamicExecutor = Executors.newCachedThreadPool();
 
     @Transactional
     public AppointmentResponse bookAppointment(AppointmentRequest request) {
@@ -36,6 +60,25 @@ public class AppointmentService {
             .orElseThrow(() -> new ResourceNotFoundException("Patient not found with id: " + request.getPatientId()));
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
             .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with id: " + request.getDoctorId()));
+        
+        // --- INSURANCE VERIFICATION (COMPLETABLEFUTURE) ---
+        // Using supplyAsync with our custom ThreadPoolExecutor
+        CompletableFuture<Boolean> insuranceFuture = CompletableFuture.supplyAsync(
+            () -> insuranceService.checkValidInsurance(patient.getEmail(), patient.getPhone()),
+            insuranceExecutor
+        );
+
+        // Blocking here for the demo to ensure we get a result, but we allow booking regardless
+        Boolean isInsuranceValid = insuranceFuture.join();
+        patient.setInsuranceVerified(isInsuranceValid);
+        patientRepository.save(patient); // Update the patient's record with the verification result
+        
+        // --- BACKGROUND AUDIT (CACHED THREAD POOL) ---
+        // Fire-and-forget logging using our dynamic executor
+        dynamicExecutor.execute(() -> {
+            System.out.println("[AUDIT] Thread " + Thread.currentThread().getName() + " is processing audit for patient " + patient.getName());
+        });
+
         if (!doctor.getAvailable()) {
             throw new InvalidOperationException("Doctor is not available");
         }
@@ -65,7 +108,6 @@ public class AppointmentService {
                 "Token " + saved.getTokenNumber()
             );
         }
-        
         AppointmentResponse response = mapToResponse(saved);
         sendQueueUpdate(doctor.getId(), saved.getDate());
         return response;

@@ -26,6 +26,8 @@ public class Patient {
     @Column(name = "userId")
     private Long userId;
 
+    private Boolean insuranceVerified; // Tracks if insurance is valid for cash vs insurance billing
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

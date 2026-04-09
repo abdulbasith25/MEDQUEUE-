@@ -23,4 +23,5 @@ public class PatientResponse {
     private Long estimatedWaitMinutes;
     private LocalDateTime expectedTime;
     private boolean checkedIn;
+    private Integer personalWaitEstimate; // Result from our Callable
 }

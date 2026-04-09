@@ -25,6 +25,8 @@ public class PatientService {
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
     private final QueueShufflingService shufflingService;
+    private final ClinicAnalyticsService analyticsService;
+
     @Transactional
     public PatientResponse createPatient(PatientRequest request) {
         if (patientRepository.existsByPhone(request.getPhone())) {
@@ -68,6 +70,10 @@ public class PatientService {
         long waitingMinutes = peopleAhead * averageConsultationTime;
         LocalDateTime expectedTime = LocalDateTime.now().plusMinutes(waitingMinutes);
 
+        // --- CALLABLE EXAMPLE ---
+        // This will now calculate the DOCTOR'S real historical speed!
+        Integer avgDoctorTime = analyticsService.calculateDoctorAverageTime(doctor.getId());
+
         return PatientResponse.builder()
                 .id(patient.getId())
                 .name(patient.getName())
@@ -79,6 +85,7 @@ public class PatientService {
                 .estimatedWaitMinutes(waitingMinutes)
                 .expectedTime(expectedTime)
                 .checkedIn(appointment.isCheckedIn())
+                .personalWaitEstimate(avgDoctorTime) // Result from Callable
                 .build();
     }
 
@@ -101,6 +108,10 @@ public class PatientService {
         appointment.setCheckedIn(true);
         Appointment saved = appointmentRepository.save(appointment);
         
+        // --- RUNNABLE EXAMPLE ---
+        // This runs "fire-and-forget" in the background so the user doesn't have to wait!
+        analyticsService.logAuditAsync("Patient " + patient.getName() + " checked in for appointment ID " + saved.getId());
+
         // Trigger the shuffling engine!
         shufflingService.tryShuffleQueue(saved.getDoctor().getId(), saved.getDate());
         
