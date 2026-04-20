@@ -23,6 +23,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
+    private final LoginAttemptService loginAttemptService;
 
     public AuthResponse register(AuthRequest request) {
         Role selectedRole = request.getRole() != null ? request.getRole() : Role.ROLE_PATIENT;
@@ -59,15 +60,34 @@ public class AuthService {
     }
 
     public AuthResponse authenticate(AuthRequest request) {
+
+        String key = request.getUsername(); // or IP (better later)
+
+    // 🔴 Block if too many attempts
+    if (loginAttemptService.isBlocked(key)) {
+        throw new RuntimeException("Too many login attempts. Try again later.");
+    }
+
+    try {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getUsername(),
                         request.getPassword()
                 )
         );
-        var user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow();
-        var jwtToken = jwtUtils.generateToken(user);
+
+        // ✅ success → reset attempts
+        loginAttemptService.loginSucceeded(key);
+
+    } catch (Exception e) {
+        // ❌ failure → increment attempts
+        loginAttemptService.loginFailed(key);
+        throw e;
+    }
+       var user = userRepository.findByUsername(request.getUsername())
+            .orElseThrow();
+
+    var jwtToken = jwtUtils.generateToken(user);
         return AuthResponse.builder()
                 .token(jwtToken)
                 .username(user.getUsername())

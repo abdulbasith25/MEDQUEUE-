@@ -63,18 +63,15 @@ public class AppointmentService {
         
         // --- INSURANCE VERIFICATION (COMPLETABLEFUTURE) ---
         // Using supplyAsync with our custom ThreadPoolExecutor
-        CompletableFuture<Boolean> insuranceFuture = CompletableFuture.supplyAsync(
-            () -> insuranceService.checkValidInsurance(patient.getEmail(), patient.getPhone()),
-            insuranceExecutor
-        );
+            CompletableFuture<Boolean> insuranceFuture = CompletableFuture.supplyAsync(
+                () -> insuranceService.checkValidInsurance(patient.getEmail(), patient.getPhone()),
+                insuranceExecutor
+            ).thenAccept(isValid -> {
+                updateInsuranceStatus(patient.getId(),isValid);
+                patientRepository.save(patient);
+            });
 
-        // Blocking here for the demo to ensure we get a result, but we allow booking regardless
-        Boolean isInsuranceValid = insuranceFuture.join();
-        patient.setInsuranceVerified(isInsuranceValid);
-        patientRepository.save(patient); // Update the patient's record with the verification result
         
-        // --- BACKGROUND AUDIT (CACHED THREAD POOL) ---
-        // Fire-and-forget logging using our dynamic executor
         dynamicExecutor.execute(() -> {
             System.out.println("[AUDIT] Thread " + Thread.currentThread().getName() + " is processing audit for patient " + patient.getName());
         });
@@ -111,7 +108,14 @@ public class AppointmentService {
         AppointmentResponse response = mapToResponse(saved);
         sendQueueUpdate(doctor.getId(), saved.getDate());
         return response;
-    }
+}
+
+@Transactional
+public void updateInsurance(Long patientId, Boolean isValid) {
+    Patient p = patientRepository.findById(patientId).orElseThrow();
+    p.setInsuranceVerified(isValid);
+}
+
     @Transactional
     public AppointmentResponse getNextToken(NextTokenRequest request) {
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
