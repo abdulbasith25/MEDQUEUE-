@@ -25,6 +25,11 @@ public class RatingController{
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/add-comment")
+    public ResponseEntity<CommentResponse> addComment(@Valid @requestBody CommentRequest request){
+        CommentResponse response = commentService.addComment()
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
 
 
 }

@@ -3,14 +3,21 @@ package com.appointment.service;
 import com.appointment.config.JwtUtils;
 import com.appointment.dto.AuthRequest;
 import com.appointment.dto.AuthResponse;
+import com.appointment.entity.Doctor;
+import com.appointment.entity.Patient;
 import com.appointment.entity.Role;
 import com.appointment.entity.User;
+import com.appointment.repository.DoctorRepository;
+import com.appointment.repository.PatientRepository;
 import com.appointment.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
 
 
 @Service
@@ -18,8 +25,8 @@ import org.springframework.stereotype.Service;
 public class AuthService { 
 
     private final UserRepository userRepository;
-    private final com.appointment.repository.DoctorRepository doctorRepository;
-    private final com.appointment.repository.PatientRepository patientRepository;
+    private final DoctorRepository doctorRepository;
+    private final PatientRepository patientRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
@@ -36,14 +43,14 @@ public class AuthService {
 
         // Create specialized profiles
         if (selectedRole == Role.ROLE_DOCTOR) {
-            com.appointment.entity.Doctor doctor = new com.appointment.entity.Doctor();
+            Doctor doctor = new Doctor();
             doctor.setName(request.getName());
             doctor.setSpecialization(request.getSpecialization());
             doctor.setDegree(request.getDegree());
             doctor.setUserId(savedUser.getId());
             doctorRepository.save(doctor);
         } else if (selectedRole == Role.ROLE_PATIENT) {
-            com.appointment.entity.Patient patient = new com.appointment.entity.Patient();
+            Patient patient = new Patient();
             patient.setName(request.getName());
             patient.setPhone(request.getPhone());
             patient.setEmail(request.getEmail());
@@ -93,5 +100,15 @@ public class AuthService {
                 .username(user.getUsername())
                 .role(user.getRole().name())
                 .build();
+    }
+
+    @CacheEvict(value = "userDetails", key = "#username")
+    public void changePassword(String username, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        // The cache entry for this 'username' is now deleted from Caffeine
     }
 }
