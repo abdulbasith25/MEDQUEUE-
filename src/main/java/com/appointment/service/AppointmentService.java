@@ -5,6 +5,7 @@ import com.appointment.dto.NextTokenRequest;
 import com.appointment.entity.Appointment;
 import com.appointment.entity.AppointmentStatus;
 import com.appointment.entity.Doctor;
+import com.appointment.service.insuranceAsyncService;
 import com.appointment.entity.Patient;
 import com.appointment.exception.InvalidOperationException;
 import com.appointment.exception.ResourceNotFoundException;
@@ -39,7 +40,7 @@ public class AppointmentService {
     private final EmailNotificationService emailNotificationService;
     private final SimpMessagingTemplate messagingTemplate;
     private final InsuranceService insuranceService;
-    
+    private final insuranceAsyncService insuranceAsyncService;
     private static final int coreThreads = 2;
     private static final int maxThreads = 10;
     private static final long timeOut = 50L;
@@ -63,18 +64,18 @@ public class AppointmentService {
         
         // --- INSURANCE VERIFICATION (COMPLETABLEFUTURE) ---
         // Using supplyAsync with our custom ThreadPoolExecutor
-            CompletableFuture<Boolean> insuranceFuture = CompletableFuture.supplyAsync(
-                () -> insuranceService.checkValidInsurance(patient.getEmail(), patient.getPhone()),
-                insuranceExecutor
-            ).thenAccept(isValid -> {
-                updateInsuranceStatus(patient.getId(),isValid);
-                patientRepository.save(patient);
-            });
+        //     CompletableFuture<Boolean> insuranceFuture = CompletableFuture.supplyAsync(
+        //         () -> insuranceService.checkValidInsurance(patient.getEmail(), patient.getPhone()),
+        //         insuranceExecutor
+        //     ).thenAccept(isValid -> {
+        //         updateInsuranceStatus(patient.getId(),isValid);
+        //         patientRepository.save(patient);
+        //     });
 
         
-        dynamicExecutor.execute(() -> {
-            System.out.println("[AUDIT] Thread " + Thread.currentThread().getName() + " is processing audit for patient " + patient.getName());
-        });
+        // dynamicExecutor.execute(() -> {
+        //     System.out.println("[AUDIT] Thread " + Thread.currentThread().getName() + " is processing audit for patient " + patient.getName());
+        // });
 
         if (!doctor.getAvailable()) {
             throw new InvalidOperationException("Doctor is not available");
@@ -106,6 +107,7 @@ public class AppointmentService {
             );
         }
         AppointmentResponse response = mapToResponse(saved);
+        insuranceAsyncService.verifyAndUpdate(patient.getId(),patient.getEmail(),patient.getPhone());
         sendQueueUpdate(doctor.getId(), saved.getDate());
         return response;
 }

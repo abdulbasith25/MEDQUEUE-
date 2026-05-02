@@ -28,8 +28,8 @@ public class RatingController{
     }
 
     @PostMapping("/add-comment")
-    public ResponseEntity<CommentResponse> addComment(@Valid @requestBody CommentRequest request){
-        CommentResponse response = commentService.addComment()
+    public ResponseEntity<CommentResponse> addComment(@Valid @RequestBody CommentRequest request){
+        CommentResponse response = commentService.addComment(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
