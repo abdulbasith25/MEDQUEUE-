@@ -51,5 +51,18 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByDoctorAndStatus(Doctor doctor, AppointmentStatus status);
     Optional<Appointment> findFirstByPatientAndDateOrderByTokenNumberDesc(Patient patient, LocalDate date);
     List<Appointment> findByDoctorAndStatusAndDate(Doctor doctor, AppointmentStatus status, LocalDate date);
+    @Query("""
+SELECT new com.appointment.dto.DailyStatsResponse(
+    :date,
+    COUNT(a),
+    SUM(CASE WHEN a.status = com.appointment.entity.AppointmentStatus.BOOKED   THEN 1L ELSE 0L END),
+    SUM(CASE WHEN a.status = com.appointment.entity.AppointmentStatus.DONE      THEN 1L ELSE 0L END),
+    SUM(CASE WHEN a.status = com.appointment.entity.AppointmentStatus.SKIPPED   THEN 1L ELSE 0L END),
+    SUM(CASE WHEN a.status = com.appointment.entity.AppointmentStatus.CANCELLED THEN 1L ELSE 0L END)
+)
+FROM Appointment a
+WHERE a.date = :date
+""")
+DailyStatsResponse getDailyStats(@Param("date") LocalDate date);
     
 }

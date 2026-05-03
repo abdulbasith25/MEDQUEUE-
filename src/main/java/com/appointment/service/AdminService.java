@@ -36,7 +36,7 @@ public class AdminService {
     private final DoctorRepository doctorRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final AuthService authService;
-    private final ExecutorService executer = Executors.newFixedThreadPool(5);
+    private final ExecutorService executor = Executors.newFixedThreadPool(5);
     // ── Admin can create any user ──────────────────────────────────────────────
     @Transactional
     public com.appointment.dto.AuthResponse createUser(AuthRequest request) {
@@ -51,13 +51,7 @@ public class AdminService {
 
     // ── 2. Daily appointment statistics across the whole clinic ───────────────
     public DailyStatsResponse getDailyStats(LocalDate date) {
-        CompletableFuture<Long> totalAppointments = CompletableFuture.supplyAsync(() -> appointmentRepository.countByDate(date),executer);
-        CompletableFuture<Long> totalBooked = CompletableFuture.supplyAsync(() ->appointmentRepository.countByDateAndStatus(date,AppointmentStatus.BOOKED),executer);
-        CompletableFuture<Long> totalDone   = CompletableFuture.supplyAsync(() ->appointmentRepository.countByDateAndStatus(date,AppointmentStatus.DONE),executer);
-        CompletableFuture<Long> totalSkipped = CompletableFuture.supplyAsync(() ->appointmentRepository.countByDateAndStatus(date,AppointmentStatus.SKIPPED),executer);
-        CompletableFuture<Long> totalCancelled = CompletableFuture.supplyAsync(() ->appointmentRepository.countByDateAndStatus(date,AppointmentStatus.CANCELLED),executer);
-        CompletableFuture.allOf(totalAppointments, totalBooked, totalCancelled, totalDone, totalSkipped).join();
-        return new DailyStatsResponse(date,totalAppointments.join(), totalBooked.join(), totalDone.join(), totalSkipped.join(), totalCancelled.join());
+        return appointmentRepository.getDailyStats(date);
     }
 
     // ── 3. Get all appointments for a specific date (admin full view) ─────────
