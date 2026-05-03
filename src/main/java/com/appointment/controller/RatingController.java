@@ -1,5 +1,7 @@
 package com.appointment.controller;
 import com.appointment.dto.RatingResponse;
+import com.appointment.dto.CommentResponse;
+import com.appointment.dto.CommentRequest;
 import com.appointment.dto.RatingRequest;
 import com.appointment.service.CommentService;
 import com.appointment.service.RatingService;
