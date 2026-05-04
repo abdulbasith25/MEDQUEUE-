@@ -14,7 +14,7 @@ public class LoginAttemptService {
     public LoginAttemptService() {
         this.attemptsCache = Caffeine.newBuilder()
                 .expireAfterWrite(15, TimeUnit.MINUTES)
-                .maximumSize(1000)
+                .maximumSize(100)
                 .build();
     }
 

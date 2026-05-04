@@ -15,8 +15,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @RequiredArgsConstructor
 public class ApplicationConfig {
 
-    // Inject CustomUserDetailsService (which has @Cacheable) directly
-    // to avoid a duplicate UserDetailsService bean conflict
     private final CustomUserDetailsService customUserDetailsService;
 
     @Bean

@@ -34,14 +34,19 @@ public class AuthService {
 
     public AuthResponse register(AuthRequest request) {
         Role selectedRole = request.getRole() != null ? request.getRole() : Role.ROLE_PATIENT;
-        var user = User.builder()
-                .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(selectedRole)
-                .build();
+        // var user = User.builder()
+        //         .username(request.getUsername())
+        //         .password(passwordEncoder.encode(request.getPassword()))
+        //         .role(selectedRole)
+        //         .build();
+
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(selectedRole);
+
         User savedUser = userRepository.save(user);
 
-        // Create specialized profiles
         if (selectedRole == Role.ROLE_DOCTOR) {
             Doctor doctor = new Doctor();
             doctor.setName(request.getName());
@@ -59,18 +64,17 @@ public class AuthService {
         }
 
         var jwtToken = jwtUtils.generateToken(savedUser);
-        return AuthResponse.builder()
-                .token(jwtToken)
-                .username(savedUser.getUsername())
-                .role(savedUser.getRole().name())
-                .build();
+        AuthResponse response = new AuthResponse();
+        response.setToken(jwtToken);
+        response.setUsername(savedUser.getUsername());
+        response.setRole(savedUser.getRole().name());
+        return response;
     }
 
     public AuthResponse authenticate(AuthRequest request) {
 
-        String key = request.getUsername(); // or IP (better later)
+        String key = request.getUsername(); 
 
-    // 🔴 Block if too many attempts
     if (loginAttemptService.isBlocked(key)) {
         throw new RuntimeException("Too many login attempts. Try again later.");
     }
@@ -95,11 +99,11 @@ public class AuthService {
             .orElseThrow();
 
     var jwtToken = jwtUtils.generateToken(user);
-        return AuthResponse.builder()
-                .token(jwtToken)
-                .username(user.getUsername())
-                .role(user.getRole().name())
-                .build();
+        AuthResponse response = new AuthResponse();
+        response.setToken(jwtToken);
+        response.setUsername(user.getUsername());
+        response.setRole(user.getRole().name());
+        return response;
     }
 
     @CacheEvict(value = "userDetails", key = "#username")

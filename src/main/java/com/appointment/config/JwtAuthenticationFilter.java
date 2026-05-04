@@ -43,7 +43,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (username != null &&
             SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            // loadUserByUsername is now backed by Caffeine cache — no DB hit after first call
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
             if (jwtUtils.isTokenValid(jwt, userDetails)) {

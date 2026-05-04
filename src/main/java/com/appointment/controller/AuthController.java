@@ -19,14 +19,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-
-    // Only OnRegister group constraints are triggered here
+    
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody @Validated(OnRegister.class) AuthRequest request) {
         return ResponseEntity.ok(authService.register(request));
     }
 
-    // Only OnLogin group constraints are triggered here
+    
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> authenticate(
             @RequestBody @Validated(OnLogin.class) AuthRequest request) {

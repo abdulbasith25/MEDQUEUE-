@@ -23,13 +23,8 @@ public class ClinicAnalyticsService {
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
     
-    // A standard Java ExecutorService
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
 
-    /**
-     * REAL RUNNABLE: Writes check-in events to a physical log file.
-     * File I/O is slow, so we do this in the background.
-     */
     public void logAuditAsync(String message) {
         Runnable task = () -> {
             String timestamp = LocalDateTime.now().toString();
@@ -44,16 +39,16 @@ public class ClinicAnalyticsService {
         };
         executor.execute(task);
     }
+    
+    @PreDestroy
+    public void shutdown() {
+        executor.shutdown();
+    }
 
-    /**
-     * REAL CALLABLE: Calculates a doctor's actual average consultation speed.
-     * Fetches real data from DB and performs calculations.
-     */
     public Integer calculateDoctorAverageTime(Long doctorId) {
         Callable<Integer> task = () -> {
             log.info("[ANALYTICS] Fetching history for Doctor ID: {}", doctorId);
             
-            // Fetch all COMPLETED appointments for this doctor
             List<Appointment> history = appointmentRepository.findByDoctorAndStatus(
                     doctorRepository.getReferenceById(doctorId), 
                     AppointmentStatus.DONE

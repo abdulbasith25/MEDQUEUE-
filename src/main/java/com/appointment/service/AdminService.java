@@ -43,18 +43,17 @@ public class AdminService {
         return authService.register(request);
     }
 
-    // ── 1. View all doctors with their live queue status for a given date ─────
-    // One single DB query (JOIN + GROUP BY) instead of N×5 round trips
+    
     public List<DoctorQueueStatusResponse> getDoctorQueueStatus(LocalDate date) {
         return appointmentRepository.findAllDoctorQueueStatus(date);
     }
 
-    // ── 2. Daily appointment statistics across the whole clinic ───────────────
+    
     public DailyStatsResponse getDailyStats(LocalDate date) {
         return appointmentRepository.getDailyStats(date);
     }
 
-    // ── 3. Get all appointments for a specific date (admin full view) ─────────
+    
     public List<AppointmentResponse> getAllAppointmentsByDate(LocalDate date) {
         return appointmentRepository.findByDateOrderByDoctorIdAscTokenNumberAsc(date)
             .stream()
