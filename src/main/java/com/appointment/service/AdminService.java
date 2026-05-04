@@ -150,7 +150,7 @@ public class AdminService {
             doctor.getAvailable(),
             doctor.getDegree(),
             averageConsultationTime,
-            totalConsultations
+            totalConsultatiaons
         );
     }
 
