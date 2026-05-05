@@ -16,6 +16,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     @Cacheable(value = "userDetails", key = "#username")
+
     public UserDetails loadUserByUsername(String username) {
         System.out.println("DB HIT for user: " + username); // debug — only prints on cache miss
         return userRepository.findByUsername(username)

@@ -23,4 +23,14 @@ public class CacheConfig {
         );
         return manager;
     }
+
+    @Bean 
+    public CacheManager cachemanager(){
+        CaffeineCacheManager manager = new CaffeineCacheManager("dummycache");
+        manager.setCaffeine(Caffeine.newBuilder()
+        .maximumSize(100)
+        .expireAfterWrite(20, TimeUnit.MINUTES)
+        .build());
+        return manager;
+    }
 }
