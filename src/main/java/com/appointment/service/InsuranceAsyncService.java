@@ -1,8 +1,12 @@
 package com.appointment.service;
 
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import com.appointment.entity.Patient;
+
 import com.appointment.service.InsuranceService;
+import com.appointment.entity.Patient;
+import com.appointment.exception.ResourceNotFoundException;
+import com.appointment.repository.PatientRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +19,7 @@ public class InsuranceAsyncService {
     private final PatientRepository patientRepository;
 
     @Transactional
-    @Async
+    @Async("InsuranceExecutor")
     public void verifyAndUpdate(
         Long patientId,
         String email,

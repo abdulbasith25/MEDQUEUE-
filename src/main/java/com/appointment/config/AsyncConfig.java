@@ -32,4 +32,23 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+    // @Bean(name = "callableTaskExecutor")
+    // ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    // execcutor.setCorePoolSize(2);
+    // executor.setMaxPoolSize(`0);
+    // executor.setQueueCapacity(100);
+    // executor.setThreadNameePrefix("callablethread");
+    // executor.initialize();
+    // return executor;
+
+    @Bean(name = "InsuranceExecutor")
+    public Executor insuranceExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(3);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("Insurance-");
+        executor.initialize();
+        return executor;
+    }
 }

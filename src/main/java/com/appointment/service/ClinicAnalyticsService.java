@@ -4,8 +4,10 @@ import com.appointment.entity.Appointment;
 import com.appointment.entity.AppointmentStatus;
 import com.appointment.repository.AppointmentRepository;
 import com.appointment.repository.DoctorRepository;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.FileWriter;
@@ -39,6 +41,25 @@ public class ClinicAnalyticsService {
         };
         executor.execute(task);
     }
+
+    /* 
+    // STUDY: The Spring @Async way (Commented out to avoid duplicate method error)
+    @Async("callableTaskExecutor")
+    public void logAuditAsync(String message) {
+        Runnable task = () -> {
+            String timestamp = LocalDateTime.now().toString();
+            String logEntry = String.format("[%s] %s\n", timestamp, message);
+            
+            try (FileWriter writer = new FileWriter("clinic_audit.log", true)) {
+                writer.write(logEntry);
+                log.info("[BACKUP LOG] Successfully wrote to clinic_audit.log");
+            } catch (IOException e) {
+                log.error("[BACKUP LOG] Failed to write to file", e);
+            }
+        };
+        executor.execute(task);
+    }
+    */
     
     @PreDestroy
     public void shutdown() {
@@ -79,6 +100,3 @@ public class ClinicAnalyticsService {
         }
     }
 }
-
-
- 
