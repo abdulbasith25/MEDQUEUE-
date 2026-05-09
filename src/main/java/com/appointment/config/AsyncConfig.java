@@ -51,4 +51,14 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+    
+    @Bean(name = "QupdateExecutor")
+    public ThreadPoolTaskExecutor QupdateExecutor(){
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(2);
+    executor.setMaxPoolSize(10);
+    executor.setQueueCapacity(100);
+    executor.setThreadNamePrefix("Qtaskexecutor");
+    executor.initialize();
+    return executor;
 }

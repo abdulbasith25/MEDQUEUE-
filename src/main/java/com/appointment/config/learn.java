@@ -20,6 +20,17 @@ public  class learn extends OncePerRequestFilter {
                 userdetail userdetails = this.userdetailsservice,loadbyusername(username);
                 
             }
+            if (!jwtutils.isTokenValid(jwt, userdetail)) {
+                usernamepasswordauthenticationtoken authtoken =
+                new UsernamePasswordAuthenticationToken(userdetails, null, userdetails.getAuthorities());
+
+                authtoken.setdetails(
+                    new webauthenticationdetailssource.builddetails(request)
+                );
+
+                securitycontextholder.setAuthentication(authtoken);
+            }
+            JwtAuthenticationFilter.doFilterInternal(request, response, filterchain);
         }
     }
     

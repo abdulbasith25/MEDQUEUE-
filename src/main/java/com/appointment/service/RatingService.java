@@ -30,6 +30,9 @@ public class RatingService {
         if (ratingExists) {
             throw new DuplicateResourceException("Rating already exists for patient " + request.getPatientId() + " and doctor " + request.getDoctorId());
         }
+        if(request.getRating()<0 || request.getRating > 4){
+            throw new IllegalArgumentException("Out of bound rating!")
+        }
         Rating rating = new Rating();
         rating.setDoctor(doctor);
         rating.setPatient(patient);

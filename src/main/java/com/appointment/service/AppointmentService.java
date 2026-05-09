@@ -53,6 +53,7 @@ public class AppointmentService {
         TimeUnit.SECONDS, 
         queueCapacity 
     );
+    private final ThreadPoolTaskExecutor QupdateExecutor;
     private final ExecutorService dynamicExecutor = Executors.newCachedThreadPool();
 
     @Transactional
@@ -165,10 +166,11 @@ public void updateInsurance(Long patientId, Boolean isValid) {
         }
         return mapToResponse(appointments.get(0));
     }
+
     private void sendQueueUpdate(Long doctorId, LocalDate date) {
         // Find the last "DONE" appointment to get the "Current Token"
-        List<Appointment> lastDone = appointmentRepository.findLastDoneAppointment(doctorId, date);
-        Integer currentToken = lastDone.isEmpty() ? 0 : lastDone.get(0).getTokenNumber();
+        CompletableFuture<List<Appointment>> lastDoneFuture = CompletableFuture.supplyAsync(() -> appointmentRepository.findLastDoneAppointment(doctorId, date),QupdateExecutor);
+        Integer currentToken = lastDoneFuture.get().isEmpty() ? 0 : lastDoneFuture.get().get(0).getTokenNumber();
         
         // Find the next "BOOKED" appointment
         List<Appointment> nextBooked = appointmentRepository.findNextBookedAppointment(
