@@ -52,13 +52,22 @@ public class AsyncConfig {
         return executor;
     }
     
+    // @Bean(name = "QupdateExecutor")
+    // public ThreadPoolTaskExecutor QupdateExecutor(){
+    // ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    // executor.setCorePoolSize(2);
+    // executor.setMaxPoolSize(10);
+    // executor.setQueueCapacity(100);
+    // executor.setThreadNamePrefix("Qtaskexecutor");
+    // executor.initialize();
+    // return executor;
+
+
     @Bean(name = "QupdateExecutor")
-    public ThreadPoolTaskExecutor QupdateExecutor(){
-    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(2);
-    executor.setMaxPoolSize(10);
-    executor.setQueueCapacity(100);
-    executor.setThreadNamePrefix("Qtaskexecutor");
-    executor.initialize();
-    return executor;
+    public ThreadPoolExecutor QupdateExecutor(){
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(1,10,40L,TimeUnit.SECONDS,new ArrayBlockingQueue<>(100), new ThreadPoolExecutor.CallerRunsPolicy());
+        return executor;
+        
+    }
+
 }
