@@ -11,20 +11,23 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class AdminInitializer implements CommandLineRunner {
-
+    @Value("${admin.username}")
+    private String username;
+    @Value("${admin.password}")
+    private String password;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
-        if (userRepository.findByUsername("admin").isEmpty()) {
+        if (userRepository.findByUsername(username).isEmpty()) {
             User admin = User.builder()
-                    .username("admin")
-                    .password(passwordEncoder.encode("admin123"))
+                    .username(username)
+                    .password(passwordEncoder.encode(password))
                     .role(Role.ROLE_ADMIN)
                     .build();
             userRepository.save(admin);
-            System.out.println("Default Admin account created: admin / admin123");
+            // System.out.println("Default Admin account created: " + username + " / " + password);
         }
     }
 }
