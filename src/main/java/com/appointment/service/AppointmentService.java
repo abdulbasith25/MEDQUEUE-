@@ -12,6 +12,7 @@ import com.appointment.exception.ResourceNotFoundException;
 import com.appointment.repository.AppointmentRepository;
 import com.appointment.repository.DoctorRepository;
 import com.appointment.repository.PatientRepository;
+import com.appointment.event.BookingTryEvent;
 import com.appointment.service.notification.EmailNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -84,6 +85,11 @@ public class AppointmentService {
         if (request.getDate().isBefore(LocalDate.now())) {
             throw new InvalidOperationException("Cannot book appointment for past date");
         }
+        BookingTryEvent bookingTryEvent = new BookingTryEvent();
+        bookingTryEvent.setPatientId(request.getPatientId());
+        bookingTryEvent.setPatientEmail(patient.getEmail());
+        bookingTryEvent.setPatientPhone(patient.getPhone());
+        kafkaTemplate.send("insurance-check",bookingTryEvent);
         Integer maxToken = appointmentRepository.findMaxTokenNumberByDoctorAndDate(
             request.getDoctorId(),
             request.getDate()
